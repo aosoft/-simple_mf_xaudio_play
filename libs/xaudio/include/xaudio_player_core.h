@@ -155,8 +155,8 @@ private:
 
     void STDMETHODCALLTYPE OnBufferEnd(void* pBufferContext) override
     {
-        for (auto itr : _buffers) {
-            if (pBufferContext == itr.get_xaudio_buffer().audio_data) {
+        for (auto itr = _buffers.begin(); itr != _buffers.end(); itr++) {
+            if (pBufferContext == itr->get_xaudio_buffer().audio_data) {
                 _buffers.erase(itr);
                 break;
             }
