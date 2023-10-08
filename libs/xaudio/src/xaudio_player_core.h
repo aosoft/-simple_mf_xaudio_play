@@ -136,6 +136,9 @@ public:
 private:
     void STDMETHODCALLTYPE OnVoiceProcessingPassStart(UINT32 BytesRequired) override
     {
+        if (_on_voice_processing_pass_start != nullptr) {
+            _on_voice_processing_pass_start(BytesRequired);
+        }
     }
 
     void STDMETHODCALLTYPE OnVoiceProcessingPassEnd() override
