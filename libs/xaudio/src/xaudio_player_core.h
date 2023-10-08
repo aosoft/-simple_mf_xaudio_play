@@ -3,6 +3,7 @@
 #include "common.h"
 #include <vector>
 #include <functional>
+#include <mutex>
 #include <xaudio2.h>
 
 struct xaudio_buffer {
@@ -22,6 +23,7 @@ concept play_buffer = requires(T& x) {
 template <play_buffer T>
 class xaudio_player_core : private IXAudio2VoiceCallback {
 private:
+    std::mutex _mutex;
     com_ptr<IXAudio2> _xaudio;
     IXAudio2MasteringVoice* _mastering_voice;
     IXAudio2SourceVoice* _source_voice;
@@ -40,7 +42,7 @@ public:
         finalize();
     }
 
-    HRESULT initialize(const WAVEFORMATEX& wfx)
+    HRESULT initialize(const WAVEFORMATEX& wfx) noexcept
     {
         finalize();
         CHECK_HR(XAudio2Create(&_xaudio, 0, XAUDIO2_DEFAULT_PROCESSOR))
@@ -51,27 +53,31 @@ public:
         return S_OK;
     }
 
-    void finalize()
+    void finalize() noexcept
     {
         _mastering_voice = nullptr;
         _source_voice = nullptr;
         _xaudio = nullptr;
+        _buffers.clear();
     }
 
-    [[nodiscard]] bool is_initialized() const
+    [[nodiscard]] bool is_initialized() const noexcept
     {
         return _xaudio != nullptr && _mastering_voice != nullptr && _source_voice != nullptr;
     }
 
-    HRESULT start()
+    HRESULT start(std::function<void(std::uint32_t)> on_voice_processing_pass_start) noexcept
     {
+        std::lock_guard<std::mutex> lock(_mutex);
+
         if (!is_initialized()) {
             return E_FAIL;
         }
+        _on_voice_processing_pass_start = on_voice_processing_pass_start;
         return _source_voice->Start();
     }
 
-    HRESULT stop()
+    HRESULT stop() noexcept
     {
         if (!is_initialized()) {
             return S_FALSE;
@@ -79,7 +85,7 @@ public:
         return _source_voice->Stop();
     }
 
-    [[nodiscard]] XAUDIO2_VOICE_STATE get_voice_state() const
+    [[nodiscard]] XAUDIO2_VOICE_STATE get_voice_state() const noexcept
     {
         if (is_initialized()) {
             XAUDIO2_VOICE_STATE ret;
@@ -89,7 +95,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] float get_volume() const
+    [[nodiscard]] float get_volume() const noexcept
     {
         if (is_initialized()) {
             float volume;
@@ -99,7 +105,7 @@ public:
         return 0.0f;
     }
 
-    HRESULT set_volume(float volume)
+    HRESULT set_volume(float volume) noexcept
     {
         if (is_initialized()) {
             return _source_voice->SetVolume(volume);
@@ -107,8 +113,10 @@ public:
         return S_FALSE;
     }
 
-    HRESULT submit_audio_data(T&& audio_data)
+    HRESULT submit_audio_data(T&& audio_data) noexcept
     try {
+        std::lock_guard<std::mutex> lock(_mutex);
+
         XAUDIO2_BUFFER buffer = {};
         buffer.pAudioData = audio_data.get_xaudio_buffer().audio_data;
         buffer.AudioBytes = audio_data.get_xaudio_buffer().audio_bytes;
