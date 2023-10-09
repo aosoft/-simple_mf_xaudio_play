@@ -8,3 +8,5 @@ include_directories(
         ../libs/xaudio/include)
 
 add_executable(simple_mf_xaudio_play main.cpp)
+
+target_link_libraries(simple_mf_xaudio_play xaudio)

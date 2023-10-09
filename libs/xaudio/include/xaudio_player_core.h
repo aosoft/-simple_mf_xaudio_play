@@ -81,7 +81,7 @@ public:
         return _source_voice->Stop();
     }
 
-    bool is_buffered() const noexcept
+    [[nodiscard]] bool is_buffered() const noexcept
     {
         std::lock_guard<std::mutex> lock(_mutex);
         return _buffers.size() > 0;
