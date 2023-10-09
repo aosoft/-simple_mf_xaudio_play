@@ -6,34 +6,36 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 
-class play_buffer_mf {
+class play_buffer_mf_locked {
 private:
     com_ptr<IMFMediaBuffer> _buffer;
+    const std::uint8_t* _locked_buffer;
+    std::uint32_t _locked_bytes;
+
+private:
+    play_buffer_mf_locked() = default;
 
 public:
-    play_buffer_mf() = default;
-    play_buffer_mf(IMFMediaBuffer* buffer) : _buffer(buffer) {}
-    play_buffer_mf(play_buffer_mf&& other) : _buffer(std::move(other._buffer)) {}
-    play_buffer_mf& operator=(play_buffer_mf&& other)
-    {
-        _buffer = std::move(other._buffer);
-        return *this;
-    }
+    static HRESULT create(IMFMediaBuffer* buffer, play_buffer_mf_locked& ret);
+
+    ~play_buffer_mf_locked();
+    play_buffer_mf_locked(play_buffer_mf_locked&& other);
+    play_buffer_mf_locked& operator=(play_buffer_mf_locked&& other);
 
     const std::uint8_t* get_audio_data() const
     {
-        return nullptr;
+        return _locked_buffer;
     }
 
     std::uint32_t get_audio_bytes() const
     {
-        return 0;
+        return _locked_bytes;
     }
 };
 
 class xaudio_player_mf {
 private:
-    xaudio_player_core<play_buffer_mf> _core;
+    xaudio_player_core<play_buffer_mf_locked> _core;
     com_ptr<IMFSourceReader> _source_reader;
     std::uint32_t _stream_index;
 
@@ -45,15 +47,18 @@ public:
 
     HRESULT start() noexcept;
 
-    HRESULT stop() noexcept {
+    HRESULT stop() noexcept
+    {
         return _core.stop();
     }
 
-    [[nodiscard]] bool is_initialized() const noexcept {
+    [[nodiscard]] bool is_initialized() const noexcept
+    {
         return _core.is_initialized();
     }
 
-    [[nodiscard]] bool is_buffered() const noexcept {
+    [[nodiscard]] bool is_buffered() const noexcept
+    {
         return _core.is_buffered();
     }
 };
