@@ -12,10 +12,8 @@ private:
     const std::uint8_t* _locked_buffer;
     std::uint32_t _locked_bytes;
 
-private:
-    play_buffer_mf_locked() = default;
-
 public:
+    play_buffer_mf_locked() = default;
     static HRESULT create(IMFMediaBuffer* buffer, play_buffer_mf_locked& ret);
 
     ~play_buffer_mf_locked();
