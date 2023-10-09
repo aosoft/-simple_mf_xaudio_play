@@ -25,7 +25,8 @@ struct audio_buffer {
         return *this;
     }
 
-    audio_buffer(audio_buffer&& src) {
+    audio_buffer(audio_buffer&& src)
+    {
         buffer_data = src.buffer_data;
         src.buffer_data = {};
         buf = std::move(src.buf);
@@ -61,12 +62,16 @@ int main()
 
     std::int64_t offset = buf.get_xaudio_buffer().audio_bytes / 2;
     CHECK_HR(player.start([&offset](auto& self, auto x) {
-        auto buf = audio_buffer(offset);
-        offset += buf.get_xaudio_buffer().audio_bytes / 2;
-        CHECK_HR(self.submit_audio_data(std::move(buf)));
+        if (offset < 3 * 48000) {
+            auto buf = audio_buffer(offset);
+            offset += buf.get_xaudio_buffer().audio_bytes / 2;
+            CHECK_HR(self.submit_audio_data(std::move(buf)));
+        }
     }))
 
-    ::Sleep(10000);
+    while (player.is_buffered()) {
+        ::Sleep(100);
+    }
 
     player.stop();
 

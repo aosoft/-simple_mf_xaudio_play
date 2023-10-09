@@ -23,7 +23,7 @@ concept play_buffer = requires(T& x) {
 template <play_buffer T>
 class xaudio_player_core : private IXAudio2VoiceCallback {
 private:
-    std::mutex _mutex;
+    mutable std::mutex _mutex;
     com_ptr<IXAudio2> _xaudio;
     IXAudio2MasteringVoice* _mastering_voice;
     IXAudio2SourceVoice* _source_voice;
@@ -83,6 +83,11 @@ public:
             return S_FALSE;
         }
         return _source_voice->Stop();
+    }
+
+    bool is_buffered() const noexcept {
+        std::lock_guard<std::mutex> lock(_mutex);
+        return _buffers.size() > 0;
     }
 
     [[nodiscard]] XAUDIO2_VOICE_STATE get_voice_state() const noexcept
