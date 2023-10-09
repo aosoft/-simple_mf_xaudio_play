@@ -1,24 +1,20 @@
 #pragma once
 
 #include "common.h"
-#include <vector>
 #include <functional>
 #include <mutex>
+#include <vector>
 #include <xaudio2.h>
-
-struct xaudio_buffer {
-    const std::uint8_t* audio_data;
-    std::uint32_t audio_bytes;
-};
 
 template <typename T>
 concept play_buffer = requires(T& x) {
     {
-        x.get_xaudio_buffer()
-    } -> std::convertible_to<const xaudio_buffer&>;
+        x.get_audio_data()
+    } -> std::convertible_to<const std::uint8_t*>;
+    {
+        x.get_audio_bytes()
+    } -> std::convertible_to<std::uint32_t>;
 };
-
-
 
 template <play_buffer T>
 class xaudio_player_core : private IXAudio2VoiceCallback {
@@ -85,7 +81,8 @@ public:
         return _source_voice->Stop();
     }
 
-    bool is_buffered() const noexcept {
+    bool is_buffered() const noexcept
+    {
         std::lock_guard<std::mutex> lock(_mutex);
         return _buffers.size() > 0;
     }
@@ -126,12 +123,14 @@ public:
             return S_FALSE;
         }
 
-        XAUDIO2_BUFFER buffer = {};
-        buffer.pAudioData = audio_data.get_xaudio_buffer().audio_data;
-        buffer.AudioBytes = audio_data.get_xaudio_buffer().audio_bytes;
-        buffer.pContext = const_cast<std::uint8_t*>(audio_data.get_xaudio_buffer().audio_data);
-
         _buffers.push_back(std::move(audio_data));
+        const auto it = _buffers.rbegin();
+
+        XAUDIO2_BUFFER buffer = {};
+        buffer.pAudioData = it->get_audio_data();
+        buffer.AudioBytes = it->get_audio_bytes();
+        buffer.pContext = const_cast<std::uint8_t*>(buffer.pAudioData);
+
         HRESULT hr = _source_voice->SubmitSourceBuffer(&buffer);
         if (FAILED(hr)) {
             _buffers.pop_back();
@@ -165,7 +164,7 @@ private:
     void STDMETHODCALLTYPE OnBufferEnd(void* pBufferContext) override
     {
         for (auto itr = _buffers.begin(); itr != _buffers.end(); itr++) {
-            if (pBufferContext == itr->get_xaudio_buffer().audio_data) {
+            if (pBufferContext == itr->get_audio_data()) {
                 _buffers.erase(itr);
                 break;
             }
