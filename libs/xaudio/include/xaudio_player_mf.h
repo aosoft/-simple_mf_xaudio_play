@@ -40,7 +40,8 @@ private:
 public:
     xaudio_player_mf();
 
-    HRESULT initialize(IMFSourceReader* source_reader, std::uint32_t stream_index) noexcept;
+    HRESULT initialize(const wchar_t* url, std::uint32_t stream_index = MF_SOURCE_READER_FIRST_AUDIO_STREAM);
+    HRESULT initialize(IMFSourceReader* source_reader, std::uint32_t stream_index = MF_SOURCE_READER_FIRST_AUDIO_STREAM) noexcept;
     void finalize() noexcept;
 
     HRESULT start() noexcept;
