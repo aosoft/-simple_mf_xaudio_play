@@ -11,6 +11,20 @@ HRESULT xaudio_player_mf::initialize(IMFSourceReader* source_reader, std::uint32
         return E_POINTER;
     }
 
+    com_ptr<IMFMediaType> media_type;
+    WAVEFORMATEXTENSIBLE wfex;
+    WAVEFORMATEXTENSIBLE* wfex_temp;
+
+    CHECK_HR(MFCreateMediaType(&media_type))
+    CHECK_HR(media_type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio))
+    CHECK_HR(media_type->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM))
+    CHECK_HR(source_reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, media_type.Get()))
+    media_type.Reset();
+    CHECK_HR(source_reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, &media_type))
+    CHECK_HR(MFCreateWaveFormatExFromMFMediaType(media_type.Get(), reinterpret_cast<WAVEFORMATEX**>(&wfex_temp), nullptr, MFWaveFormatExConvertFlag_ForceExtensible))
+    wfex = *wfex_temp;
+    ::CoTaskMemFree(wfex_temp);
+
     return E_NOTIMPL;
 }
 
