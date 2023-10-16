@@ -1,5 +1,5 @@
 #include <common.h>
-#include <xaudio_player_core.h>
+#include <xaudio_player_mf.h>
 
 struct audio_buffer {
     std::vector<short> buf;
@@ -37,37 +37,21 @@ struct audio_buffer {
     }
 };
 
-int main()
+int wmain(int argc, const wchar_t** argv)
 {
+    if (argc < 2) {
+        return 0;
+    }
+
     co_initializer coinit(COINIT_MULTITHREADED);
 
-    xaudio_player_core<audio_buffer> player;
+    xaudio_player_mf player;
 
-    WAVEFORMATEX wfex = {};
-    wfex.wFormatTag = WAVE_FORMAT_PCM;
-    wfex.nChannels = 1;
-    wfex.wBitsPerSample = 16;
-    wfex.nBlockAlign = wfex.nChannels * wfex.wBitsPerSample / 8;
-    wfex.nSamplesPerSec = 48000;
-    wfex.nAvgBytesPerSec = wfex.nSamplesPerSec * wfex.nBlockAlign;
-    wfex.cbSize = 0;
 
-    CHECK_HR(player.initialize(wfex))
+    CHECK_HR(player.initialize(argv[1]))
+    CHECK_HR(player.start());
 
-    auto buf = audio_buffer(0);
-    std::int64_t offset = buf.get_audio_bytes() / 2;
-    CHECK_HR(player.submit_audio_data(std::move(buf)));
-    CHECK_HR(player.start([&offset](auto& self, auto x) {
-        if (offset < 3 * 48000) {
-            auto buf = audio_buffer(offset);
-            offset += buf.get_audio_bytes() / 2;
-            self.submit_audio_data(std::move(buf));
-        }
-    }))
-
-    while (player.is_buffered()) {
-        ::Sleep(100);
-    }
+    ::Sleep(3000);
 
     player.stop();
 

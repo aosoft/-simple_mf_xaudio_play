@@ -1,5 +1,11 @@
 #include "xaudio_player_mf.h"
 
+#pragma comment(lib, "mf.lib")
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfuuid.lib")
+#pragma comment(lib, "mfreadwrite.lib")
+
+
 xaudio_player_mf::xaudio_player_mf()
     : _stream_index(0)
 {
