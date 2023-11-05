@@ -1,5 +1,6 @@
 #pragma once
 
+#include <crtdbg.h>
 #include <memory>
 #include <wrl/client.h>
 
@@ -10,6 +11,7 @@ using com_ptr = Microsoft::WRL::ComPtr<Intf>;
     {                        \
         HRESULT hrtmp = hr;  \
         if (FAILED(hrtmp)) { \
+            _CrtDbgBreak();  \
             return hrtmp;    \
         }                    \
     }

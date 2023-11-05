@@ -37,6 +37,23 @@ struct audio_buffer {
     }
 };
 
+class mf_initializer {
+private:
+    HRESULT _hr;
+
+public:
+    mf_initializer()
+        : _hr(::MFStartup(MF_VERSION, 0))
+    {
+    }
+    ~mf_initializer()
+    {
+        if (SUCCEEDED(_hr)) {
+            ::MFShutdown();
+        }
+    }
+};
+
 int wmain(int argc, const wchar_t** argv)
 {
     if (argc < 2) {
@@ -44,14 +61,14 @@ int wmain(int argc, const wchar_t** argv)
     }
 
     co_initializer coinit(COINIT_MULTITHREADED);
+    mf_initializer mfinit;
 
     xaudio_player_mf player;
-
 
     CHECK_HR(player.initialize(argv[1]))
     CHECK_HR(player.start());
 
-    ::Sleep(3000);
+    ::Sleep(5000);
 
     player.stop();
 
