@@ -68,7 +68,7 @@ int wmain(int argc, const wchar_t** argv)
     CHECK_HR(player.initialize(argv[1]))
     CHECK_HR(player.start());
 
-    ::Sleep(5000);
+    ::Sleep(10000);
 
     player.stop();
 

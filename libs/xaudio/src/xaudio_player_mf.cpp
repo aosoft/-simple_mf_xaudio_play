@@ -45,7 +45,9 @@ HRESULT xaudio_player_mf::initialize(IMFSourceReader* source_reader, std::uint32
     _source_reader = source_reader;
     _stream_index = stream_index;
 
-    return E_NOTIMPL;
+    CHECK_HR(_core.initialize(reinterpret_cast<WAVEFORMATEX&>(wfex)));
+
+    return S_OK;
 }
 
 void xaudio_player_mf::finalize() noexcept
@@ -62,7 +64,8 @@ HRESULT xaudio_player_mf::start() noexcept
 
     return _core.start([source_reader = _source_reader, stream_index = _stream_index](auto& core, auto bytes_required) {
         com_ptr<IMFSample> sample;
-        if (SUCCEEDED(source_reader->ReadSample(stream_index, 0, nullptr, nullptr, nullptr, &sample))) {
+        DWORD stream_flags;
+        if (SUCCEEDED(source_reader->ReadSample(stream_index, 0, nullptr, &stream_flags, nullptr, &sample))) {
             DWORD buffer_count;
             if (SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
                 com_ptr<IMFMediaBuffer> buffer;
