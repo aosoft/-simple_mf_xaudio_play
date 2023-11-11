@@ -63,16 +63,27 @@ HRESULT xaudio_player_mf::start() noexcept
     }
 
     return _core.start([source_reader = _source_reader, stream_index = _stream_index](auto& core, auto bytes_required) {
+        if (bytes_required < 1) {
+            return;
+        }
         com_ptr<IMFSample> sample;
         DWORD stream_flags;
-        if (SUCCEEDED(source_reader->ReadSample(stream_index, 0, nullptr, &stream_flags, nullptr, &sample))) {
-            DWORD buffer_count;
-            if (SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
-                com_ptr<IMFMediaBuffer> buffer;
-                if (SUCCEEDED(sample->GetBufferByIndex(0, &buffer))) {
-                    play_buffer_mf_locked locked;
-                    if (SUCCEEDED(play_buffer_mf_locked::create(buffer.Get(), locked))) {
-                        core.submit_audio_data(std::move(locked));
+        auto last_bytes = bytes_required;
+        while (true) {
+            if (SUCCEEDED(source_reader->ReadSample(stream_index, 0, nullptr, &stream_flags, nullptr, &sample))) {
+                DWORD buffer_count;
+                if (SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
+                    com_ptr<IMFMediaBuffer> buffer;
+                    if (SUCCEEDED(sample->GetBufferByIndex(0, &buffer))) {
+                        play_buffer_mf_locked locked;
+                        if (SUCCEEDED(play_buffer_mf_locked::create(buffer.Get(), locked))) {
+                            auto bytes = locked.get_audio_bytes();
+                            core.submit_audio_data(std::move(locked));
+                            if (bytes >= last_bytes) {
+                                break;
+                            }
+                            last_bytes -= bytes;
+                        }
                     }
                 }
             }
