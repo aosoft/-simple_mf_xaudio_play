@@ -64,7 +64,7 @@ HRESULT xaudio_player_mf::start() noexcept
 
     return _core.start([source_reader = _source_reader, stream_index = _stream_index](auto& core, auto bytes_required) {
         if (bytes_required < 1) {
-            return;
+            return false;
         }
         com_ptr<IMFSample> sample;
         DWORD stream_flags;
@@ -72,7 +72,11 @@ HRESULT xaudio_player_mf::start() noexcept
         while (true) {
             if (SUCCEEDED(source_reader->ReadSample(stream_index, 0, nullptr, &stream_flags, nullptr, &sample))) {
                 DWORD buffer_count;
-                if (SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
+                if (stream_flags & MF_SOURCE_READERF_ENDOFSTREAM) {
+                    return true;
+                }
+                if (sample != nullptr &&
+                    SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
                     com_ptr<IMFMediaBuffer> buffer;
                     if (SUCCEEDED(sample->GetBufferByIndex(0, &buffer))) {
                         play_buffer_mf_locked locked;
@@ -88,6 +92,7 @@ HRESULT xaudio_player_mf::start() noexcept
                 }
             }
         }
+        return false;
     });
 }
 

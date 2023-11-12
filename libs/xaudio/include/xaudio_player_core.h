@@ -24,12 +24,14 @@ private:
     IXAudio2MasteringVoice* _mastering_voice;
     IXAudio2SourceVoice* _source_voice;
     std::vector<T> _buffers;
-    std::function<void(xaudio_player_core<T>&, std::uint32_t)> _on_voice_processing_pass_start;
+    bool _eos;
+    std::function<bool(xaudio_player_core<T>&, std::uint32_t)> _on_voice_processing_pass_start;
 
 public:
     xaudio_player_core()
         : _mastering_voice(nullptr)
         , _source_voice(nullptr)
+        , _eos(false)
     {
     }
 
@@ -62,7 +64,7 @@ public:
         return _xaudio != nullptr && _mastering_voice != nullptr && _source_voice != nullptr;
     }
 
-    HRESULT start(std::function<void(xaudio_player_core<T>&, std::uint32_t)> on_voice_processing_pass_start) noexcept
+    HRESULT start(std::function<bool(xaudio_player_core<T>&, std::uint32_t)> on_voice_processing_pass_start) noexcept
     {
         std::lock_guard<std::mutex> lock(_mutex);
 
@@ -70,6 +72,7 @@ public:
             return E_FAIL;
         }
         _on_voice_processing_pass_start = on_voice_processing_pass_start;
+        _eos = false;
         return _source_voice->Start();
     }
 
@@ -145,7 +148,10 @@ private:
     void STDMETHODCALLTYPE OnVoiceProcessingPassStart(UINT32 BytesRequired) override
     {
         if (_on_voice_processing_pass_start != nullptr) {
-            _on_voice_processing_pass_start(*this, BytesRequired);
+            if (_on_voice_processing_pass_start(*this, BytesRequired)) {
+                std::lock_guard<std::mutex> lock(_mutex);
+                _eos = true;
+            }
         }
     }
 
@@ -163,11 +169,20 @@ private:
 
     void STDMETHODCALLTYPE OnBufferEnd(void* pBufferContext) override
     {
-        for (auto itr = _buffers.begin(); itr != _buffers.end(); itr++) {
-            if (pBufferContext == itr->get_audio_data()) {
-                _buffers.erase(itr);
-                break;
+        bool s = false;
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+
+            for (auto itr = _buffers.begin(); itr != _buffers.end(); itr++) {
+                if (pBufferContext == itr->get_audio_data()) {
+                    _buffers.erase(itr);
+                    break;
+                }
             }
+            s = _eos && _buffers.size() < 1;
+        }
+        if (s) {
+            stop();
         }
     }
 
