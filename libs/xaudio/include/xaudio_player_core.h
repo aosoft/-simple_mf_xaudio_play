@@ -26,12 +26,14 @@ private:
     std::vector<T> _buffers;
     bool _eos;
     std::function<bool(xaudio_player_core<T>&, std::uint32_t)> _on_voice_processing_pass_start;
+    bool _playing;
 
 public:
     xaudio_player_core()
         : _mastering_voice(nullptr)
         , _source_voice(nullptr)
         , _eos(false)
+        , _playing(false)
     {
     }
 
@@ -72,16 +74,27 @@ public:
             return E_FAIL;
         }
         _on_voice_processing_pass_start = on_voice_processing_pass_start;
+        CHECK_HR(_source_voice->Start())
+        _playing = true;
         _eos = false;
-        return _source_voice->Start();
+        return S_OK;
     }
 
     HRESULT stop() noexcept
     {
+        std::lock_guard<std::mutex> lock(_mutex);
+
         if (!is_initialized()) {
             return S_FALSE;
         }
-        return _source_voice->Stop();
+        CHECK_HR(_source_voice->Stop())
+        _playing = false;
+        return S_OK;
+    }
+
+    bool is_playing() const {
+        std::lock_guard<std::mutex> lock(_mutex);
+        return _playing;
     }
 
     [[nodiscard]] bool is_buffered() const noexcept

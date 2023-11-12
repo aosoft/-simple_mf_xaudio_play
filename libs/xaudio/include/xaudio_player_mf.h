@@ -51,6 +51,10 @@ public:
         return _core.stop();
     }
 
+    bool is_playing() const {
+        return _core.is_playing();
+    }
+
     [[nodiscard]] bool is_initialized() const noexcept
     {
         return _core.is_initialized();

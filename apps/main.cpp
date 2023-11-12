@@ -68,9 +68,11 @@ int wmain(int argc, const wchar_t** argv)
     CHECK_HR(player.initialize(argv[1]))
     CHECK_HR(player.start());
 
-    ::Sleep(10000);
-
-    player.stop();
+    while (true) {
+        if (!player.is_playing()) {
+            break;
+        }
+    }
 
     return 0;
 }
