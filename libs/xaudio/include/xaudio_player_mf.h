@@ -16,9 +16,9 @@ public:
     play_buffer_mf_locked() = default;
     static HRESULT create(IMFMediaBuffer* buffer, play_buffer_mf_locked& ret);
 
-    ~play_buffer_mf_locked();
-    play_buffer_mf_locked(play_buffer_mf_locked&& other);
-    play_buffer_mf_locked& operator=(play_buffer_mf_locked&& other);
+    ~play_buffer_mf_locked() noexcept;
+    play_buffer_mf_locked(play_buffer_mf_locked&& other) noexcept;
+    play_buffer_mf_locked& operator=(play_buffer_mf_locked&& other) noexcept;
 
     const std::uint8_t* get_audio_data() const
     {
@@ -38,7 +38,7 @@ private:
     std::uint32_t _stream_index;
 
 public:
-    xaudio_player_mf();
+    xaudio_player_mf() noexcept;
 
     HRESULT initialize(const wchar_t* url, std::uint32_t stream_index = MF_SOURCE_READER_FIRST_AUDIO_STREAM);
     HRESULT initialize(IMFSourceReader* source_reader, std::uint32_t stream_index = MF_SOURCE_READER_FIRST_AUDIO_STREAM) noexcept;

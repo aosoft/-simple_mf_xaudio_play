@@ -29,7 +29,7 @@ private:
     bool _playing;
 
 public:
-    xaudio_player_core()
+    xaudio_player_core() noexcept
         : _mastering_voice(nullptr)
         , _source_voice(nullptr)
         , _eos(false)
@@ -37,7 +37,7 @@ public:
     {
     }
 
-    ~xaudio_player_core()
+    ~xaudio_player_core() noexcept
     {
         finalize();
     }

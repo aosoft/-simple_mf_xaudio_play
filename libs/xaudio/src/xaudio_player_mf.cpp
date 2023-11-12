@@ -5,8 +5,7 @@
 #pragma comment(lib, "mfuuid.lib")
 #pragma comment(lib, "mfreadwrite.lib")
 
-
-xaudio_player_mf::xaudio_player_mf()
+xaudio_player_mf::xaudio_player_mf() noexcept
     : _stream_index(0)
 {
 }
@@ -75,8 +74,7 @@ HRESULT xaudio_player_mf::start() noexcept
                 if (stream_flags & MF_SOURCE_READERF_ENDOFSTREAM) {
                     return true;
                 }
-                if (sample != nullptr &&
-                    SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
+                if (sample != nullptr && SUCCEEDED(sample->GetBufferCount(&buffer_count)) && buffer_count > 0) {
                     com_ptr<IMFMediaBuffer> buffer;
                     if (SUCCEEDED(sample->GetBufferByIndex(0, &buffer))) {
                         play_buffer_mf_locked locked;
@@ -110,14 +108,14 @@ HRESULT play_buffer_mf_locked::create(IMFMediaBuffer* buffer, play_buffer_mf_loc
     return S_OK;
 }
 
-play_buffer_mf_locked::~play_buffer_mf_locked()
+play_buffer_mf_locked::~play_buffer_mf_locked() noexcept
 {
     if (_buffer != nullptr && _locked_buffer != nullptr && _locked_bytes > 0) {
         _buffer->Unlock();
     }
 }
 
-play_buffer_mf_locked::play_buffer_mf_locked(play_buffer_mf_locked&& other)
+play_buffer_mf_locked::play_buffer_mf_locked(play_buffer_mf_locked&& other) noexcept
     : _buffer(std::move(other._buffer))
     , _locked_buffer(other._locked_buffer)
     , _locked_bytes(other._locked_bytes)
@@ -126,7 +124,7 @@ play_buffer_mf_locked::play_buffer_mf_locked(play_buffer_mf_locked&& other)
     other._locked_bytes = 0;
 }
 
-play_buffer_mf_locked& play_buffer_mf_locked::operator=(play_buffer_mf_locked&& other)
+play_buffer_mf_locked& play_buffer_mf_locked::operator=(play_buffer_mf_locked&& other) noexcept
 {
     _buffer = std::move(other._buffer);
     _locked_buffer = other._locked_buffer;
