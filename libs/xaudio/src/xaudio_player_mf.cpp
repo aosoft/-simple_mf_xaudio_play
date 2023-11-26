@@ -94,6 +94,12 @@ HRESULT xaudio_player_mf::start() noexcept
     });
 }
 
+play_buffer_mf_locked::play_buffer_mf_locked()
+    : _locked_buffer(nullptr)
+    , _locked_bytes(0)
+{
+}
+
 HRESULT play_buffer_mf_locked::create(IMFMediaBuffer* buffer, play_buffer_mf_locked& ret)
 {
     if (buffer == nullptr) {
@@ -102,34 +108,36 @@ HRESULT play_buffer_mf_locked::create(IMFMediaBuffer* buffer, play_buffer_mf_loc
 
     DWORD max_length;
     DWORD current_length;
-    CHECK_HR(buffer->Lock(const_cast<std::uint8_t**>(&ret._locked_buffer), &max_length, &current_length));
-    ret._locked_bytes = current_length;
-    ret._buffer = buffer;
+    play_buffer_mf_locked temp = {};
+    CHECK_HR(buffer->Lock(const_cast<std::uint8_t**>(&temp._locked_buffer), &max_length, &current_length));
+    temp._locked_bytes = current_length;
+    temp._buffer = buffer;
+    std::swap(ret, temp);
     return S_OK;
 }
 
-play_buffer_mf_locked::~play_buffer_mf_locked() noexcept
-{
-    if (_buffer != nullptr && _locked_buffer != nullptr && _locked_bytes > 0) {
-        _buffer->Unlock();
-    }
-}
-
 play_buffer_mf_locked::play_buffer_mf_locked(play_buffer_mf_locked&& other) noexcept
-    : _buffer(std::move(other._buffer))
+    : _buffer(other._buffer)
     , _locked_buffer(other._locked_buffer)
     , _locked_bytes(other._locked_bytes)
 {
-    other._locked_buffer = nullptr;
-    other._locked_bytes = 0;
+    other.unlock();
 }
 
 play_buffer_mf_locked& play_buffer_mf_locked::operator=(play_buffer_mf_locked&& other) noexcept
 {
-    _buffer = std::move(other._buffer);
+    unlock();
+    _buffer = other._buffer;
     _locked_buffer = other._locked_buffer;
     _locked_bytes = other._locked_bytes;
-    other._locked_buffer = nullptr;
-    other._locked_bytes = 0;
+    other.unlock();
     return *this;
+}
+
+void play_buffer_mf_locked::unlock() {
+    if (_buffer != nullptr && _locked_buffer != nullptr && _locked_bytes > 0) {
+        _buffer->Unlock();
+    }
+    _locked_buffer = nullptr;
+    _locked_bytes = 0;
 }

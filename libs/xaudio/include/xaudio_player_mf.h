@@ -13,10 +13,13 @@ private:
     std::uint32_t _locked_bytes;
 
 public:
-    play_buffer_mf_locked() = default;
+    play_buffer_mf_locked();
     static HRESULT create(IMFMediaBuffer* buffer, play_buffer_mf_locked& ret);
 
-    ~play_buffer_mf_locked() noexcept;
+    ~play_buffer_mf_locked() noexcept {
+        unlock();
+    }
+
     play_buffer_mf_locked(play_buffer_mf_locked&& other) noexcept;
     play_buffer_mf_locked& operator=(play_buffer_mf_locked&& other) noexcept;
 
@@ -29,6 +32,9 @@ public:
     {
         return _locked_bytes;
     }
+
+private:
+    void unlock();
 };
 
 class xaudio_player_mf {
